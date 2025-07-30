@@ -61,7 +61,7 @@
         if((payload.type==='order_range'&&(!payload.start||!payload.end))||(payload.type==='date'&&!payload.date)){resultsDiv.innerHTML=`<p class="text-red-600">Please fill in all required fields.</p>`;resetButton();return}
         try{
             // *** THIS URL HAS BEEN UPDATED FOR YOU ***
-            const backendUrl='https://chipper-cactus-382f4c.netlify.app/.netlify/functions/fetchImages';
+            const backendUrl = '/.netlify/functions/fetchImages';
             
             const response=await fetch(backendUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok){throw new Error(data.message||`HTTP error! status: ${response.status}`)}
         resultsDiv.innerHTML=`<p class="text-green-600">${data.message}</p>`;if(data.zipData){downloadZip(data.zipData,data.fileName);const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);if(isMobile){resultsDiv.innerHTML+=`<p class="text-blue-700 font-semibold mt-2">Download started! Check your "Files" app, then tap the .zip file to uncompress and save to your photo gallery.</p>`}else{resultsDiv.innerHTML+=`<p class="text-green-700 font-semibold mt-2">Your .zip file has been downloaded!</p>`}}}catch(error){resultsDiv.innerHTML=`<p class="text-red-600">An error occurred: ${error.message}</p>`}finally{resetButton()}}
