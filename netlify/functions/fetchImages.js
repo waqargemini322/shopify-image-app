@@ -139,32 +139,51 @@ async function getOrdersByDate(date, creds) {
 
 async function getOrdersByNumberRange(startNum, endNum, creds) {
     let allOrders = [];
-    let page = 1;
-    const maxPages = 15;
-    while (page <= maxPages) {
-        const params = new URLSearchParams({
-            status: 'open',
-            limit: '250',
-            page: page.toString()
+    // Start with the initial URL for the first page of open orders
+    let nextUrl = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?status=open&limit=250`;
+
+    // Loop as long as Shopify provides a URL for the next page
+    while (nextUrl) {
+        const response = await fetch(nextUrl, {
+            headers: { 'X-Shopify-Access-Token': creds.ADMIN_API_ACCESS_TOKEN }
         });
+
+        if (!response.ok) {
+            // Improved error logging to see details from Shopify
+            const errorBody = await response.text();
+            throw new Error(`Shopify API error: ${response.statusText}. Details: ${errorBody}`);
+        }
         
-        const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?${params.toString()}`;
-        
-        const response = await fetch(url, { headers: { 'X-Shopify-Access-Token': creds.ADMIN_API_ACCESS_TOKEN } });
-        if (!response.ok) throw new Error(`Shopify API error: ${response.statusText}`);
         const data = await response.json();
         const ordersPage = data.orders || [];
-        if (!ordersPage.length) break;
+
+        if (ordersPage.length === 0) break;
+
         allOrders.push(...ordersPage);
         
-        const oldestOrderNumInPage = parseInt(ordersPage[ordersPage.length - 1].name.replace('#', ''));
+        // Optimization: Stop fetching if the oldest order on the page is already below our start number
+        const oldestOrderNumInPage = ordersPage[ordersPage.length - 1].order_number;
         if (oldestOrderNumInPage < startNum) {
-            break;
+            break; 
         }
-        page++;
+
+        // --- New Cursor-Based Pagination Logic ---
+        const linkHeader = response.headers.get('link');
+        nextUrl = null; // Reset for the next loop
+
+        if (linkHeader) {
+            const links = linkHeader.split(',');
+            const nextLink = links.find(s => s.includes('rel="next"'));
+            if (nextLink) {
+                // Extract the URL for the next page provided by Shopify
+                nextUrl = nextLink.match(/<(.*?)>/)[1];
+            }
+        }
     }
+    
+    // Finally, filter the collected orders to match the exact number range
     return allOrders.filter(order => {
-        const orderNum = parseInt(order.name.replace('#', ''));
+        const orderNum = order.order_number; // Use the more reliable 'order_number' field
         return orderNum >= startNum && orderNum <= endNum;
     });
 }
