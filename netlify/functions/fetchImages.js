@@ -133,7 +133,9 @@ async function getOrdersByNumberRange(startNum, endNum, creds) {
     let page = 1;
     const maxPages = 15;
     while (page <= maxPages) {
-        const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?status=open&limit=250&order=created_at DESC&page=${page}`;
+        // *** THIS IS THE CORRECTED LINE ***
+        const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?status=open&limit=250&order=created_at%20DESC&page=${page}`;
+        
         const response = await fetch(url, { headers: { 'X-Shopify-Access-Token': creds.ADMIN_API_ACCESS_TOKEN } });
         if (!response.ok) throw new Error(`Shopify API error: ${response.statusText}`);
         const data = await response.json();
