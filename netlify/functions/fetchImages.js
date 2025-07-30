@@ -121,7 +121,15 @@ async function getOrdersByDate(date, creds) {
     startDate.setUTCHours(0, 0, 0, 0);
     const endDate = new Date(date);
     endDate.setUTCHours(23, 59, 59, 999);
-    const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?status=open&created_at_min=${startDate.toISOString()}&created_at_max=${endDate.toISOString()}&limit=250`;
+
+    const params = new URLSearchParams({
+        status: 'open',
+        created_at_min: startDate.toISOString(),
+        created_at_max: endDate.toISOString(),
+        limit: 250
+    });
+
+    const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?${params.toString()}`;
     const response = await fetch(url, { headers: { 'X-Shopify-Access-Token': creds.ADMIN_API_ACCESS_TOKEN } });
     if (!response.ok) throw new Error(`Shopify API error: ${response.statusText}`);
     const data = await response.json();
@@ -133,8 +141,14 @@ async function getOrdersByNumberRange(startNum, endNum, creds) {
     let page = 1;
     const maxPages = 15;
     while (page <= maxPages) {
-        // *** THIS IS THE CORRECTED LINE ***
-        const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?status=open&limit=250&order=created_at%20DESC&page=${page}`;
+        const params = new URLSearchParams({
+            status: 'open',
+            limit: '250',
+            order: 'created_at desc', // Corrected: lowercase and space is handled by URLSearchParams
+            page: page.toString()
+        });
+        
+        const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?${params.toString()}`;
         
         const response = await fetch(url, { headers: { 'X-Shopify-Access-Token': creds.ADMIN_API_ACCESS_TOKEN } });
         if (!response.ok) throw new Error(`Shopify API error: ${response.statusText}`);
