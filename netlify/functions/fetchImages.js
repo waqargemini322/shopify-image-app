@@ -126,7 +126,7 @@ async function getOrdersByDate(date, creds) {
         status: 'open',
         created_at_min: startDate.toISOString(),
         created_at_max: endDate.toISOString(),
-        limit: 250
+        limit: '250'
     });
 
     const url = `https://${creds.SHOPIFY_STORE_NAME}.myshopify.com/admin/api/${creds.API_VERSION}/orders.json?${params.toString()}`;
@@ -141,10 +141,11 @@ async function getOrdersByNumberRange(startNum, endNum, creds) {
     let page = 1;
     const maxPages = 15;
     while (page <= maxPages) {
+        // *** THIS IS THE CORRECTED PART ***
+        // We fetch all recent open orders without sorting, as the 'order' parameter was causing the error.
         const params = new URLSearchParams({
             status: 'open',
             limit: '250',
-            order: 'created_at desc', // Corrected: lowercase and space is handled by URLSearchParams
             page: page.toString()
         });
         
@@ -156,10 +157,16 @@ async function getOrdersByNumberRange(startNum, endNum, creds) {
         const ordersPage = data.orders || [];
         if (!ordersPage.length) break;
         allOrders.push(...ordersPage);
-        const oldestOrderNum = parseInt(ordersPage[ordersPage.length - 1].name.replace('#', ''));
-        if (oldestOrderNum < startNum) break;
+        
+        // We check the oldest order number in the fetched page to see if we can stop fetching.
+        const oldestOrderNumInPage = parseInt(ordersPage[ordersPage.length - 1].name.replace('#', ''));
+        if (oldestOrderNumInPage < startNum) {
+             // If the oldest order is already less than our start number, we don't need to fetch more pages.
+            break;
+        }
         page++;
     }
+    // After fetching, we filter the results in our code to get the exact range.
     return allOrders.filter(order => {
         const orderNum = parseInt(order.name.replace('#', ''));
         return orderNum >= startNum && orderNum <= endNum;
